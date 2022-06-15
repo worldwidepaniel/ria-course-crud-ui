@@ -1,36 +1,30 @@
 <script lang="ts" setup>
-  import { ref, reactive } from 'vue';
-  import axios from 'axios';
-  const data = reactive({
-    email: "",
-    password: ""
+import axios from 'axios';
+import { reactive } from 'vue';
+
+const credentials = reactive({
+  email:"",
+  password:""
+})
+const cookie = useCookie("auth", {maxAge:3600})
+const router = useRouter();
+
+const sendLogin = () => {
+  axios.post("http://localhost:8080/login",credentials)
+  .then((resp) => {
+    cookie.value = resp.data.token
+    router.push({path: "/notes"})
+  }).catch((err) => {
+    alert(err);
   })
-  const error = ref("");
-  const sendLogin = () => {
-    axios.post('http://localhost:8080/login',{
-      email: data.email,
-      password: data.password
-    }).then((resp) => {
-      localStorage.setItem("token", resp.data.token)
-    }).catch((err) => {
-      error.value = err.response.data.error.charAt(0).toUpperCase() + err.response.data.error.slice(1);
-    })
-  }
+}
 </script>
 
 <template>
-  <div class="w-screen h-screen bg-jonquil p-8 flex flex-col items-center">
-    <h1 class="font-bold text-black text-9xl">BrutalNotes</h1>
-    <div class="container p-8 flex flex-col items-center">
-      <Input class="mt-8" type="email" :value="data.email" @input="(e) => data.email = e.target.value" label="Email"/>
-      <Input class="mt-4" type="password" :value="data.password" @input="(e) => data.password = e.target.value" label="Password"/>
-      <button class="border-solid border-black border-4 
-      py-2 px-4 mt-4 bg-blue 
-      text-white font-bold"
-      @click="sendLogin">
-      Login
-      </button>
-      <span class="font-bold text-red-600">{{error}}</span>
-    </div>
-  </div>
+  <NuxtLayout name="main">
+    <Input type="email" :value="credentials.email" label="Email" @input="(e) => credentials.email = e.target.value"/>
+    <Input type="password" :value="credentials.password" label="Password" @input="(e) => credentials.password = e.target.value" />
+    <Button text="Login" @click="sendLogin"/>
+    <span class="text-gray cursor-pointer" @click="router.push({path:'/register'})">Nie masz konta? Kliknij tutaj!</span>
+  </NuxtLayout>
 </template>

@@ -1,35 +1,73 @@
-<script setup lang="ts">
-import { ref, reactive } from "vue";
-import axios from "axios";
-import debounce from "lodash/debounce";
-const searchPhrase = ref("");
-const hits = reactive({data: []})
+<script lang="ts" setup>
+import { reactive, ref } from 'vue';
+import axios from 'axios';
 
-const getHits = debounce(() => {
-  axios.get(`http://localhost:8080/v1/search/${searchPhrase.value}`, {
-    headers:{
-      token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoidGVzdEB0ZXN0LnBsIiwidmFsaWRfdG8iOjE2NTQ2ODkwNDZ9.2q5nzQjh_4wnXl_n7tGxk_yeCGrKASJ9QwAA8ssOu7I"
-    }
+  definePageMeta({
+    middleware:["auth"]
   })
-  .then((resp) => {
-    hits.data = resp.data
-    console.log(hits.data[0])
+
+  const data = reactive({
+    notes: []
   })
-},500)
+  const router = useRouter();
+  const route = useRoute();
+  const pagination = ref(0);
+  const offset = ref(0);
+  onMounted(() => {
+    axios.get(`http://localhost:8080/v1/notes?&offset=${offset.value}`,{headers: {
+      token: useCookie("auth").value
+    }})
+    .then((resp) => {
+      data.notes = resp.data
+    })
+    .catch((err) => {
+      alert(err);
+    })
+    
+    axios.get(`http://localhost:8080/v1/countNotes`,{headers: {
+      token: useCookie("auth").value
+    }})
+    .then((resp) => {
+      pagination.value = Math.floor(resp.data["document-count"])
+    })
+    .catch((err) => {
+      alert(err);
+    })
+  })
+ 
+ watch(offset, (newOffset) => {
+  axios.get(`http://localhost:8080/v1/notes?&offset=${newOffset}`,{headers: {
+      token: useCookie("auth").value
+    }})
+    .then((resp) => {
+      data.notes = resp.data
+    })
+    .catch((err) => {
+      alert(err);
+    })
+ })
+  const changePage = (val) => {
+    offset.value += val
+  }
+
+    const logout = () => {
+    document.cookie = "auth=;expires=Thu, 01 Jan 1970 00:00:00 UTC"
+    router.push({path: "/"})
+  }
 </script>
 
 <template>
-  <div class="w-screen h-screen bg-jonquil p-8 flex flex-col items-center">
-    <h1 class="font-bold text-black text-9xl">BrutalNotes</h1>
-    <input type="text" label="" v-model="searchPhrase" @input="getHits"/>
-    <ul v-if="hits.data.length > 0" v-for="hit in hits.data">
-      <li v-html="hit._formatted.categories[0]"></li>
-    </ul>
-  </div>
+  <NuxtLayout name="main">
+    <div class="flex flex-row justify-center w-full">
+      <Button text="Wyloguj się" @click="logout" />
+      <Button text="Dodaj notatke" @click="() => router.push({path:'/createNote'})"/>
+    </div>
+    <div class="w-full grid grid-cols-2 gap-4">
+      <NoteCard v-for="note in data.notes" :Content="note.content" :Categories="note.categories" :NoteID="note.Note_ID" isEditable="false" />
+    </div>
+    <div class="w-full flex flex-row justify-center">
+      <Button v-if="offset > 0" text="&lt;" @click="changePage(-4)"/>
+      <Button v-if="offset+4 < pagination" text="&gt;" @click="changePage(4)" />
+    </div>
+  </NuxtLayout>
 </template>
-
-<style scpoed>
-em{
-  font-weight: bold;
-}
-</style>

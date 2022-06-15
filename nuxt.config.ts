@@ -15,4 +15,7 @@ export default defineNuxtConfig({
   css: [
     "~/assets/css/tailwind.css"
   ],
+  pageTransition: {
+    mode: "disabled"
+  },
 })
