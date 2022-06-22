@@ -2,6 +2,8 @@
 import axios from 'axios';
 import { reactive } from 'vue';
 
+const mailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+
 const credentials = reactive({
   email:"",
   password:""
@@ -10,6 +12,10 @@ const cookie = useCookie("auth", {maxAge:3600})
 const router = useRouter();
 
 const sendLogin = () => {
+  if (!credentials.email.match(mailRegex)){
+    alert("Nie poprawny adres email!")
+    return;
+  }
   axios.post("http://localhost:8080/login",credentials)
   .then((resp) => {
     cookie.value = resp.data.token
